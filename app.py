@@ -1,5 +1,6 @@
 # ============================================================
-#  AATMANIRBHAR NAARI — DASHBOARD (Clean Final Version)
+#  AATMANIRBHAR NAARI — COMPLETE FINAL VERSION
+#  Streamlit Cloud Ready
 # ============================================================
 
 import streamlit as st
@@ -7,6 +8,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import os
 
 st.set_page_config(
     page_title="Aatmanirbhar Naari",
@@ -18,9 +20,7 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
-
 html, body, [class*="css"] { font-family: 'Poppins', sans-serif !important; }
-
 .stApp {
     background: linear-gradient(135deg, #f5f0ff 0%, #fff0f5 50%, #f0f5ff 100%);
 }
@@ -28,18 +28,10 @@ html, body, [class*="css"] { font-family: 'Poppins', sans-serif !important; }
     background: linear-gradient(180deg, #4a0080 0%, #8b0057 50%, #c2185b 100%) !important;
 }
 [data-testid="stSidebar"] * { color: #ffffff !important; }
-
 .hero-banner {
     background: linear-gradient(135deg, #4a0080 0%, #8b0057 40%, #c2185b 70%, #e91e8c 100%);
     border-radius: 20px; padding: 36px 48px; margin-bottom: 28px;
     box-shadow: 0 8px 32px rgba(74,0,128,0.25);
-}
-.hero-title { font-size: 2.4rem; font-weight: 800; color: #fff; margin: 0 0 6px 0; }
-.hero-sub   { font-size: 1.0rem; color: rgba(255,255,255,0.85); margin: 0 0 16px 0; }
-.hero-badge {
-    display: inline-block; background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.35); border-radius: 20px;
-    padding: 4px 16px; font-size: 0.78rem; color: #fff; margin-right: 8px;
 }
 .hero-stat {
     display: inline-block; background: rgba(255,255,255,0.15);
@@ -48,19 +40,16 @@ html, body, [class*="css"] { font-family: 'Poppins', sans-serif !important; }
 }
 .hero-stat-num { font-size:1.5rem; font-weight:700; color:#fff; display:block; }
 .hero-stat-lbl { font-size:0.72rem; color:rgba(255,255,255,0.8); }
-
+.hero-badge {
+    display: inline-block; background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.35); border-radius: 20px;
+    padding: 4px 16px; font-size: 0.78rem; color: #fff; margin-right: 8px;
+}
 .kpi-card {
     background: white; border-radius: 16px; padding: 20px 24px;
     box-shadow: 0 4px 20px rgba(74,0,128,0.1); border-top: 4px solid;
     margin-bottom: 12px;
 }
-.kpi-value  { font-size:1.9rem; font-weight:800; color:#1a0030; display:block; line-height:1.1; }
-.kpi-label  { font-size:0.78rem; color:#888; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
-.kpi-icon   { font-size:1.6rem; margin-bottom:6px; display:block; }
-.kpi-delta  { font-size:0.75rem; font-weight:600; margin-top:6px; display:block; }
-.delta-up   { color: #27ae60; }
-.delta-down { color: #e74c3c; }
-
 .section-header {
     display:flex; align-items:center; gap:12px;
     margin: 28px 0 16px 0; padding-bottom:10px;
@@ -68,16 +57,13 @@ html, body, [class*="css"] { font-family: 'Poppins', sans-serif !important; }
 }
 .section-title    { font-size:1.2rem; font-weight:700; color:#4a0080; margin:0; }
 .section-subtitle { font-size:0.8rem; color:#999; margin:0; }
-
 .insight-card {
     background: linear-gradient(135deg, #fff0f8, #f8f0ff);
     border-left: 5px solid #8b0057; border-radius: 12px;
     padding: 14px 18px; margin: 8px 0;
-    box-shadow: 0 2px 12px rgba(139,0,87,0.08);
     font-size: 0.88rem; color: #333; line-height: 1.6;
 }
 .insight-card b { color: #4a0080; }
-
 .stTabs [data-baseweb="tab-list"] {
     background: rgba(74,0,128,0.06); border-radius: 14px; padding: 6px;
 }
@@ -88,24 +74,10 @@ html, body, [class*="css"] { font-family: 'Poppins', sans-serif !important; }
     background: linear-gradient(135deg, #7b2d8b, #c2185b) !important;
     color: white !important;
 }
-div[data-testid="metric-container"] {
-    background: white; border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(74,0,128,0.08);
-}
 </style>
 """, unsafe_allow_html=True)
-# ============================================================
-#  PIECE 2/6 — Plotly Theme + Data Loader + Sidebar
-# ============================================================
 
-# ── PLOTLY THEME ──────────────────────────────────────────────
-PLOT_LAYOUT = dict(
-    font=dict(family="Poppins, Arial", size=13, color="#1a0030"),
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(t=50, b=40, l=40, r=30),
-    title_font=dict(size=15, color="#4a0080", family="Poppins"),
-)
+# ── CONSTANTS ─────────────────────────────────────────────────
 GROWTH_COLORS = {
     "Thriving": "#27ae60",
     "Growing":  "#2980b9",
@@ -121,19 +93,203 @@ ZONE_COLORS = {
     "Northeast": "#e67e22"
 }
 
+def make_layout(title, height=400, legend=False):
+    layout = dict(
+        title=dict(text=title,
+                   font=dict(size=15, color="#4a0080")),
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Poppins", size=13, color="#1a0030"),
+        margin=dict(t=50, b=20, l=10, r=10)
+    )
+    if legend:
+        layout["legend"] = dict(
+            font=dict(size=12, color="#1a0030"),
+            bgcolor="rgba(255,255,255,0.8)"
+        )
+    return layout
+# ── DATA GENERATOR ────────────────────────────────────────────
+def generate_dataset():
+    np.random.seed(42)
+    N = 2000
+    states = ["Uttar Pradesh","Maharashtra","Rajasthan",
+              "Tamil Nadu","West Bengal","Karnataka",
+              "Gujarat","Madhya Pradesh","Bihar",
+              "Telangana","Odisha","Punjab","Assam",
+              "Kerala","Jharkhand"]
+    state_weights = [0.14,0.12,0.09,0.09,0.08,0.07,
+                     0.07,0.06,0.05,0.05,0.04,0.04,
+                     0.04,0.03,0.03]
+    zones = {
+        "Uttar Pradesh":"North","Rajasthan":"North",
+        "Punjab":"North","Maharashtra":"West",
+        "Gujarat":"West","Tamil Nadu":"South",
+        "Karnataka":"South","Telangana":"South",
+        "Kerala":"South","West Bengal":"East",
+        "Bihar":"East","Odisha":"East",
+        "Jharkhand":"East","Assam":"Northeast",
+        "Madhya Pradesh":"Central"
+    }
+    area_type = np.random.choice(
+        ["Rural","Semi-Urban","Urban"],
+        size=N, p=[0.50,0.30,0.20])
+    entrepreneur_id = [f"AN{str(i).zfill(5)}"
+                       for i in range(1,N+1)]
+    state_col = np.random.choice(states,size=N,
+                                  p=state_weights)
+    zone_col  = [zones[s] for s in state_col]
+    age       = np.random.randint(18,61,size=N)
+    education = np.random.choice(
+        ["No Formal Education","Primary (1–5)",
+         "Secondary (6–10)",
+         "Higher Secondary (11–12)",
+         "Graduate","Post-Graduate"],
+        size=N,p=[0.10,0.15,0.25,0.20,0.22,0.08])
+    marital_status = np.random.choice(
+        ["Single","Married","Widowed","Divorced"],
+        size=N,p=[0.20,0.62,0.12,0.06])
+    dependents = np.random.choice(
+        [0,1,2,3,4,5],size=N,
+        p=[0.10,0.20,0.30,0.25,0.10,0.05])
+    business_category = np.random.choice(
+        ["Food & Beverages","Handicraft & Artisan",
+         "Textile & Apparel","Beauty & Wellness",
+         "Education & Tutoring","Agriculture & Dairy",
+         "Digital Services","Retail & Trading",
+         "Healthcare Products",
+         "Home Decor & Furnishing"],
+        size=N,
+        p=[0.18,0.14,0.13,0.11,0.10,0.10,
+           0.07,0.07,0.05,0.05])
+    years_in_business = np.random.choice(
+        range(0,11),size=N,
+        p=[0.12,0.15,0.14,0.12,0.10,0.09,
+           0.08,0.07,0.06,0.04,0.03])
+    base_revenue = {
+        "Food & Beverages":18000,
+        "Handicraft & Artisan":12000,
+        "Textile & Apparel":22000,
+        "Beauty & Wellness":20000,
+        "Education & Tutoring":16000,
+        "Agriculture & Dairy":14000,
+        "Digital Services":28000,
+        "Retail & Trading":25000,
+        "Healthcare Products":21000,
+        "Home Decor & Furnishing":17000}
+    area_mult = {"Rural":0.70,
+                 "Semi-Urban":1.00,
+                 "Urban":1.45}
+    monthly_revenue = np.array([
+        max(500,int(
+            base_revenue[bc]*area_mult[at]*
+            (1+(yib*0.05))*
+            np.random.uniform(0.6,1.5)))
+        for bc,at,yib in zip(
+            business_category,
+            area_type,
+            years_in_business)])
+    monthly_expenses = (monthly_revenue*
+        np.random.uniform(0.40,0.70,N)).astype(int)
+    monthly_profit  = monthly_revenue - monthly_expenses
+    annual_revenue  = monthly_revenue * 12
+    has_loan = np.random.choice([0,1],N,p=[0.55,0.45])
+    loan_amount = np.where(has_loan==1,
+        np.random.randint(10000,500001,N),0)
+    loan_schemes = np.random.choice(
+        ["None","Mudra Yojana","Stand-Up India",
+         "PM SVANidhi","NABARD SHG","State Scheme"],
+        size=N,p=[0.40,0.22,0.10,0.12,0.10,0.06])
+    has_smartphone = np.random.choice(
+        [0,1],N,p=[0.25,0.75])
+    uses_digital_payment = np.where(
+        has_smartphone==1,
+        np.random.choice([0,1],N,p=[0.30,0.70]),0)
+    uses_social_media = np.where(
+        has_smartphone==1,
+        np.random.choice([0,1],N,p=[0.35,0.65]),0)
+    sells_online = np.where(
+        uses_social_media==1,
+        np.random.choice([0,1],N,p=[0.45,0.55]),0)
+    digital_score = (has_smartphone +
+                     uses_digital_payment +
+                     uses_social_media +
+                     sells_online)
+    trainings_attended = np.random.choice(
+        range(0,8),size=N,
+        p=[0.20,0.22,0.18,0.15,0.10,
+           0.07,0.05,0.03])
+    training_type = np.random.choice(
+        ["None","Financial Literacy",
+         "Digital Marketing",
+         "Product Quality & Packaging",
+         "Business Management",
+         "Vocational/Craft","Multiple"],
+        size=N,
+        p=[0.20,0.15,0.18,0.14,0.12,0.13,0.08])
+    shg_member = np.random.choice([0,1],N,p=[0.45,0.55])
+    has_mentor = np.random.choice([0,1],N,p=[0.65,0.35])
+    growth_score = (
+        (monthly_profit/5000).clip(0,5)+
+        (years_in_business/2).clip(0,5)+
+        digital_score*0.8+
+        (trainings_attended/1.5).clip(0,4)+
+        shg_member*1.5+has_mentor*1.0)
+    growth_stage = np.where(
+        growth_score<4,"Nascent",
+        np.where(growth_score<7,"Emerging",
+        np.where(growth_score<10,"Growing",
+                 "Thriving")))
+    dropout_prob = np.clip(
+        0.35-(digital_score*0.04)-
+        (trainings_attended*0.02)-
+        (years_in_business*0.01)+
+        np.random.normal(0,0.05,N),0.05,0.75)
+    portal_dropout = np.array([
+        np.random.choice([0,1],p=[1-p,p])
+        for p in dropout_prob])
+    df = pd.DataFrame({
+        "EntrepreneurID":entrepreneur_id,
+        "State":state_col,"Zone":zone_col,
+        "AreaType":area_type,"Age":age,
+        "Education":education,
+        "MaritalStatus":marital_status,
+        "Dependents":dependents,
+        "BusinessCategory":business_category,
+        "YearsInBusiness":years_in_business,
+        "MonthlyRevenue":monthly_revenue,
+        "MonthlyExpenses":monthly_expenses,
+        "MonthlyProfit":monthly_profit,
+        "AnnualRevenue":annual_revenue,
+        "HasLoan":has_loan,
+        "LoanAmount":loan_amount,
+        "LoanScheme":loan_schemes,
+        "HasSmartphone":has_smartphone,
+        "UsesDigitalPayment":uses_digital_payment,
+        "UsesSocialMedia":uses_social_media,
+        "SellsOnline":sells_online,
+        "DigitalScore":digital_score,
+        "TrainingsAttended":trainings_attended,
+        "TrainingType":training_type,
+        "SHGMember":shg_member,
+        "HasMentor":has_mentor,
+        "GrowthStage":growth_stage,
+        "PortalDropout":portal_dropout})
+    return df
+
 # ── DATA LOADER ───────────────────────────────────────────────
 @st.cache_data
 def load_data():
+    os.makedirs("data", exist_ok=True)
+    if not os.path.exists("data/naari_data.csv"):
+        df = generate_dataset()
+        df.to_csv("data/naari_data.csv", index=False)
     try:
         df = pd.read_csv("data/naari_clean.csv")
     except FileNotFoundError:
-        try:
-            df = pd.read_csv("data/naari_data.csv")
-        except FileNotFoundError:
-            st.error("❌ Dataset not found. Run python generate_data.py first.")
-            st.stop()
+        df = pd.read_csv("data/naari_data.csv")
         df["AgeGroup"] = pd.cut(
-            df["Age"], bins=[17,25,35,45,60],
+            df["Age"],bins=[17,25,35,45,60],
             labels=["18–25","26–35","36–45","46–60"])
         df["RevenueSegment"] = pd.cut(
             df["MonthlyRevenue"],
@@ -141,51 +297,52 @@ def load_data():
             labels=["Low (<₹10K)","Medium (₹10K–25K)",
                     "High (₹25K–50K)","Premium (>₹50K)"])
         df["ProfitMargin"] = (
-            df["MonthlyProfit"] / df["MonthlyRevenue"] * 100
-        ).round(1)
+            df["MonthlyProfit"]/
+            df["MonthlyRevenue"]*100).round(1)
+        df.to_csv("data/naari_clean.csv", index=False)
     return df
 
 df = load_data()
-
 # ── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
     <div style='text-align:center; padding:16px 0 8px 0;'>
         <div style='font-size:3rem;'>🪷</div>
-        <div style='font-size:1.3rem; font-weight:800; color:#ffe0f0;'>
+        <div style='font-size:1.3rem; font-weight:800;
+                    color:#ffe0f0;'>
             Aatmanirbhar Naari
         </div>
-        <div style='font-size:0.88rem; color:rgba(255,255,255,0.9); margin-top:4px;'>
+        <div style='font-size:0.88rem;
+                    color:rgba(255,255,255,0.9);
+                    margin-top:4px;'>
             Home Business Enablement Portal
         </div>
-        <div style='height:2px; background:rgba(255,255,255,0.2);
-                    border-radius:2px; margin:14px 0;'></div>
+        <div style='height:2px;
+                    background:rgba(255,255,255,0.2);
+                    border-radius:2px;
+                    margin:14px 0;'></div>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("### 🔍 Filters")
-
     zones_all = sorted(df["Zone"].unique())
     sel_zones = st.multiselect(
         "🗺️ Zone", zones_all, default=zones_all)
-
     area_all = sorted(df["AreaType"].unique())
     sel_area = st.multiselect(
         "🏘️ Area Type", area_all, default=area_all)
-
     cat_all = sorted(df["BusinessCategory"].unique())
     sel_cat = st.multiselect(
         "🏭 Business Category", cat_all, default=cat_all)
-
     stage_all = ["Nascent","Emerging","Growing","Thriving"]
     sel_stage = st.multiselect(
         "📈 Growth Stage", stage_all, default=stage_all)
-
     age_range = st.slider("🎂 Age Range", 18, 60, (18, 60))
 
     st.markdown("---")
     st.markdown("""
-    <div style='font-size:0.88rem; color:rgba(255,255,255,0.85);
+    <div style='font-size:0.88rem;
+                color:rgba(255,255,255,0.85);
                 line-height:1.8;'>
         <b style='color:#ffe0f0;'>📊 Data Coverage</b><br>
         2,000 entrepreneurs<br>
@@ -205,41 +362,44 @@ fdf = df[
 ].copy()
 
 if len(fdf) == 0:
-    st.warning("⚠️ No data matches the selected filters. Please adjust.")
+    st.warning("⚠️ No data matches filters. Please adjust.")
     st.stop()
-# ============================================================
-#  PIECE 3/6 — Hero Banner + KPI Cards + Tabs
-# ============================================================
 
 # ── CALCULATIONS ──────────────────────────────────────────────
 total_rev_cr = fdf["AnnualRevenue"].sum() / 1e7
-thriving_pct = (fdf["GrowthStage"] == "Thriving").mean() * 100
+thriving_pct = (fdf["GrowthStage"]=="Thriving").mean()*100
 dropout_rate = fdf["PortalDropout"].mean() * 100
 avg_rev      = fdf["MonthlyRevenue"].mean()
 avg_prof     = fdf["MonthlyProfit"].mean()
 avg_margin   = fdf["ProfitMargin"].mean()
-active_pct   = (fdf["PortalDropout"] == 0).mean() * 100
-digital_pct  = (fdf["DigitalScore"] >= 2).mean() * 100
+active_pct   = (fdf["PortalDropout"]==0).mean() * 100
+digital_pct  = (fdf["DigitalScore"]>=2).mean() * 100
 shg_pct      = fdf["SHGMember"].mean() * 100
 loan_pct     = fdf["HasLoan"].mean() * 100
 
 # ── HERO BANNER ───────────────────────────────────────────────
 st.markdown(f"""
 <div class="hero-banner">
-    <p style='font-size:0.95rem; color:rgba(255,255,255,0.9);
+    <p style='font-size:0.95rem;
+              color:rgba(255,255,255,0.9);
               font-weight:500; margin:0 0 8px 0;'>
+        🎓 Data Analytics Capstone &nbsp;
     </p>
-    <h1 style='font-size:2.4rem; font-weight:800; color:#ffffff;
-               margin:0 0 8px 0; text-shadow:0 2px 8px rgba(0,0,0,0.2);'>
-        🪷 Aatmanirbhar Naari — Women Home Business Intelligence Platform
+    <h1 style='font-size:2.4rem; font-weight:800;
+               color:#ffffff; margin:0 0 8px 0;
+               text-shadow:0 2px 8px rgba(0,0,0,0.2);'>
+        🪷 Aatmanirbhar Naari — Women Home Business
+        Intelligence Platform
     </h1>
-    <p style='font-size:1rem; color:rgba(255,255,255,0.88);
+    <p style='font-size:1rem;
+              color:rgba(255,255,255,0.88);
               font-weight:400; margin:0 0 16px 0;'>
         Home Business Enablement Portal &nbsp;·&nbsp;
-        Data-Driven Insights for Women Entrepreneurs across India
+        Data-Driven Insights for Women Entrepreneurs
+        across India
     </p>
     <span class="hero-badge">📅 FY 2024–25</span>
-    <span class="hero-badge">🇮🇳 Pan-India Initiative</span>
+    <span class="hero-badge">🇮🇳 Pan-India</span>
     <span class="hero-badge">✅ Live Dashboard</span>
     <br>
     <div class="hero-stat">
@@ -255,84 +415,98 @@ st.markdown(f"""
         <span class="hero-stat-lbl">Thriving Stage</span>
     </div>
     <div class="hero-stat">
-        <span class="hero-stat-num">{fdf['State'].nunique()}</span>
+        <span class="hero-stat-num">
+            {fdf['State'].nunique()}
+        </span>
         <span class="hero-stat-lbl">States Covered</span>
     </div>
     <div class="hero-stat">
-        <span class="hero-stat-num">{100 - dropout_rate:.1f}%</span>
+        <span class="hero-stat-num">
+            {100-dropout_rate:.1f}%
+        </span>
         <span class="hero-stat-lbl">Portal Retention</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── KPI ROW 1 ─────────────────────────────────────────────────
-c1, c2, c3, c4 = st.columns(4)
+# ── KPI CARDS ─────────────────────────────────────────────────
 kpi_style = """
     background:white; border-radius:16px; padding:22px 24px;
     box-shadow:0 4px 20px rgba(74,0,128,0.12);
     border-top:5px solid {color}; margin-bottom:12px;
 """
-for col_obj, icon, value, label, delta, delta_type, color in [
-    (c1,"💰", f"₹{avg_rev:,.0f}",  "Avg Monthly Revenue",
-     "Per entrepreneur",            "up",   "#7b2d8b"),
-    (c2,"📈", f"₹{avg_prof:,.0f}", "Avg Monthly Profit",
-     f"{avg_margin:.1f}% margin",   "up",   "#c0392b"),
-    (c3,"✅", f"{active_pct:.1f}%","Portal Active Rate",
-     f"{int(fdf['PortalDropout'].eq(0).sum()):,} active", "up", "#27ae60"),
-    (c4,"💻", f"{digital_pct:.1f}%","Digitally Enabled",
-     "Score ≥ 2 out of 4",          "up",   "#2980b9"),
+c1,c2,c3,c4 = st.columns(4)
+for col_obj,icon,value,label,delta,dt,color in [
+    (c1,"💰",f"₹{avg_rev:,.0f}",
+     "Avg Monthly Revenue","Per entrepreneur",
+     "up","#7b2d8b"),
+    (c2,"📈",f"₹{avg_prof:,.0f}",
+     "Avg Monthly Profit",f"{avg_margin:.1f}% margin",
+     "up","#c0392b"),
+    (c3,"✅",f"{active_pct:.1f}%",
+     "Portal Active Rate",
+     f"{int(fdf['PortalDropout'].eq(0).sum()):,} active",
+     "up","#27ae60"),
+    (c4,"💻",f"{digital_pct:.1f}%",
+     "Digitally Enabled","Score ≥ 2 out of 4",
+     "up","#2980b9"),
 ]:
     col_obj.markdown(f"""
     <div style='{kpi_style.format(color=color)}'>
-        <div style='font-size:1.8rem; margin-bottom:8px;'>{icon}</div>
+        <div style='font-size:1.8rem;
+                    margin-bottom:8px;'>{icon}</div>
         <div style='font-size:1.85rem; font-weight:800;
                     color:#1a0030; line-height:1.1;
                     margin-bottom:5px;'>{value}</div>
-        <div style='font-size:0.82rem; color:#555; font-weight:600;
-                    text-transform:uppercase;
+        <div style='font-size:0.82rem; color:#555;
+                    font-weight:600; text-transform:uppercase;
                     letter-spacing:0.5px;'>{label}</div>
         <div style='font-size:0.78rem; font-weight:600;
-                    color:{"#27ae60" if delta_type=="up" else "#e74c3c"};
+                    color:{"#27ae60" if dt=="up" else "#e74c3c"};
                     margin-top:6px;'>
-            {"↑" if delta_type=="up" else "↓"} {delta}
+            {"↑" if dt=="up" else "↓"} {delta}
         </div>
     </div>""", unsafe_allow_html=True)
 
 st.markdown("<div style='margin-top:4px'></div>",
             unsafe_allow_html=True)
 
-# ── KPI ROW 2 ─────────────────────────────────────────────────
-c5, c6, c7, c8 = st.columns(4)
-for col_obj, icon, value, label, delta, delta_type, color in [
-    (c5,"🤝", f"{shg_pct:.1f}%",
-     "SHG Members",         "Community strength",   "up",   "#e67e22"),
-    (c6,"🏛️", f"{loan_pct:.1f}%",
-     "Loan Access Rate",    "Inclusion gap exists", "down", "#8e44ad"),
-    (c7,"🎓", f"{fdf['TrainingsAttended'].mean():.1f}",
-     "Avg Trainings",       "Per entrepreneur",     "up",   "#16a085"),
-    (c8,"🏆", f"{thriving_pct:.1f}%",
-     "Thriving Stage",      "Highest growth tier",  "up",   "#7b2d8b"),
+c5,c6,c7,c8 = st.columns(4)
+for col_obj,icon,value,label,delta,dt,color in [
+    (c5,"🤝",f"{shg_pct:.1f}%",
+     "SHG Members","Community strength",
+     "up","#e67e22"),
+    (c6,"🏛️",f"{loan_pct:.1f}%",
+     "Loan Access Rate","Inclusion gap exists",
+     "down","#8e44ad"),
+    (c7,"🎓",f"{fdf['TrainingsAttended'].mean():.1f}",
+     "Avg Trainings","Per entrepreneur",
+     "up","#16a085"),
+    (c8,"🏆",f"{thriving_pct:.1f}%",
+     "Thriving Stage","Highest growth tier",
+     "up","#7b2d8b"),
 ]:
     col_obj.markdown(f"""
     <div style='{kpi_style.format(color=color)}'>
-        <div style='font-size:1.8rem; margin-bottom:8px;'>{icon}</div>
+        <div style='font-size:1.8rem;
+                    margin-bottom:8px;'>{icon}</div>
         <div style='font-size:1.85rem; font-weight:800;
                     color:#1a0030; line-height:1.1;
                     margin-bottom:5px;'>{value}</div>
-        <div style='font-size:0.82rem; color:#555; font-weight:600;
-                    text-transform:uppercase;
+        <div style='font-size:0.82rem; color:#555;
+                    font-weight:600; text-transform:uppercase;
                     letter-spacing:0.5px;'>{label}</div>
         <div style='font-size:0.78rem; font-weight:600;
-                    color:{"#27ae60" if delta_type=="up" else "#e74c3c"};
+                    color:{"#27ae60" if dt=="up" else "#e74c3c"};
                     margin-top:6px;'>
-            {"↑" if delta_type=="up" else "↓"} {delta}
+            {"↑" if dt=="up" else "↓"} {delta}
         </div>
     </div>""", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── TABS ──────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1,tab2,tab3,tab4,tab5,tab6 = st.tabs([
     "🏠  Overview",
     "🗺️  Geographic",
     "📈  Business & Growth",
@@ -340,10 +514,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🎓  Training & Schemes",
     "⚠️  Dropout Risk"
 ])
-# ============================================================
-#  PIECE 4/6 — Tab 1: Overview + Tab 2: Geographic
-# ============================================================
-
 # ══════════════════════════════════════════════════════════════
 #  TAB 1 — OVERVIEW
 # ══════════════════════════════════════════════════════════════
@@ -353,11 +523,12 @@ with tab1:
         <span style='font-size:1.6rem;'>📊</span>
         <div>
             <p class="section-title">Platform Overview</p>
-            <p class="section-subtitle">Growth distribution, demographics & revenue profile</p>
+            <p class="section-subtitle">Growth distribution,
+            demographics & revenue profile</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1.1, 1.1, 1.3])
+    col1,col2,col3 = st.columns([1.1,1.1,1.3])
 
     with col1:
         gs = fdf["GrowthStage"].value_counts().reset_index()
@@ -372,130 +543,97 @@ with tab1:
             pull=[0.04 if s=="Thriving" else 0
                   for s in gs["Stage"]],
             hovertemplate="<b>%{label}</b><br>"
-                          "Count: %{value:,}<br>"
-                          "%{percent}<extra></extra>"
+                "Count: %{value:,}<extra></extra>"
         ))
         fig.add_annotation(
-            text=f"<b>{len(fdf):,}</b><br>"
-                 f"<span style='font-size:11px'>Total</span>",
+            text=f"<b>{len(fdf):,}</b><br>Total",
             x=0.5, y=0.5, showarrow=False,
-            font=dict(size=16, color="#4a0080",
-                      family="Poppins")
-        )
-        fig.update_layout(
-            title=dict(text="Growth Stage Distribution",
-                       font=dict(size=15, color="#4a0080")),
-            height=360,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=10),
-            legend=dict(font=dict(size=12, color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)")
-        )
-        st.plotly_chart(fig, width='stretch')
+            font=dict(size=16, color="#4a0080"))
+        fig.update_layout(**make_layout(
+            "Growth Stage Distribution", 360, True))
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         area_gs = fdf.groupby(["AreaType","GrowthStage"])\
                      .size().reset_index(name="Count")
-        fig2 = px.bar(area_gs, x="AreaType", y="Count",
+        fig2 = px.bar(area_gs,
+            x="AreaType", y="Count",
             color="GrowthStage",
             color_discrete_map=GROWTH_COLORS,
             barmode="stack",
             labels={"Count":"Entrepreneurs",
                     "GrowthStage":"Stage","AreaType":""},
             title="Growth by Area Type")
-        fig2.update_layout(
-            height=360,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10),
-            legend=dict(font=dict(size=12, color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)")
-        )
-        st.plotly_chart(fig2, width='stretch')
+        fig2.update_layout(**make_layout(
+            "Growth by Area Type", 360, True))
+        st.plotly_chart(fig2, use_container_width=True)
 
     with col3:
         order = ["Low (<₹10K)","Medium (₹10K–25K)",
                  "High (₹25K–50K)","Premium (>₹50K)"]
         rs = fdf["RevenueSegment"].value_counts()\
-                                   .reindex(order).reset_index()
+                                   .reindex(order)\
+                                   .reset_index()
         rs.columns = ["Segment","Count"]
-        rs["Pct"] = (rs["Count"]/rs["Count"].sum()*100).round(1)
+        rs["Pct"] = (rs["Count"]/
+                     rs["Count"].sum()*100).round(1)
         fig3 = px.bar(rs, x="Count", y="Segment",
             orientation="h",
             color="Segment",
             color_discrete_sequence=["#e74c3c","#f39c12",
                                       "#2980b9","#27ae60"],
             text=rs.apply(
-                lambda r: f"{r['Count']:,}  ({r['Pct']}%)",
+                lambda r: f"{r['Count']:,} ({r['Pct']}%)",
                 axis=1),
             labels={"Count":"Entrepreneurs","Segment":""},
             title="Revenue Segment Breakdown")
-        fig3.update_traces(textposition="outside",
-                           textfont=dict(size=12,
-                                         color="#1a0030"))
-        fig3.update_layout(
-            height=360, showlegend=False,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig3, width='stretch')
+        fig3.update_traces(
+            textposition="outside",
+            textfont=dict(size=11, color="#1a0030"))
+        fig3.update_layout(showlegend=False,
+            **make_layout("Revenue Segment Breakdown",360))
+        st.plotly_chart(fig3, use_container_width=True)
 
-    # Demographics
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>👩</span>
         <div>
             <p class="section-title">Demographic Profile</p>
-            <p class="section-subtitle">Age, education & marital status</p>
+            <p class="section-subtitle">Age, education
+            & marital status</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col4, col5, col6 = st.columns(3)
+    col4,col5,col6 = st.columns(3)
 
     with col4:
-        age_data = fdf["AgeGroup"].value_counts().reset_index()
+        age_data = fdf["AgeGroup"].value_counts()\
+                                   .reset_index()
         age_data.columns = ["AgeGroup","Count"]
         fig4 = px.pie(age_data,
-            names="AgeGroup", values="Count", hole=0.45,
+            names="AgeGroup", values="Count",
+            hole=0.45,
             color_discrete_sequence=["#7b2d8b","#c2185b",
                                       "#f39c12","#2980b9"],
             title="Age Group Distribution")
         fig4.update_traces(
             textinfo="label+percent",
             textfont=dict(size=12, color="#1a0030"))
-        fig4.update_layout(
-            height=340,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10),
-            legend=dict(font=dict(size=12, color="#1a0030"))
-        )
-        st.plotly_chart(fig4, width='stretch')
+        fig4.update_layout(**make_layout(
+            "Age Group Distribution", 340, True))
+        st.plotly_chart(fig4, use_container_width=True)
 
     with col5:
         edu_order = ["No Formal Education","Primary (1–5)",
                      "Secondary (6–10)",
                      "Higher Secondary (11–12)",
                      "Graduate","Post-Graduate"]
-        edu_rev = fdf.groupby("Education", observed=True)\
+        edu_rev = fdf.groupby("Education",observed=True)\
                      ["MonthlyRevenue"].mean()\
                      .reindex(edu_order).reset_index()
         edu_rev.columns = ["Education","AvgRevenue"]
         edu_rev["Short"] = ["None","Primary","Sec",
-                            "Hgr Sec","Grad","PG"]
+                             "Hgr Sec","Grad","PG"]
         fig5 = go.Figure(go.Bar(
             x=edu_rev["Short"],
             y=edu_rev["AvgRevenue"],
@@ -504,42 +642,31 @@ with tab1:
                 colorscale=[[0,"#f9c6d0"],
                              [0.5,"#c2185b"],
                              [1,"#4a0080"]],
-                showscale=False
-            ),
-            text=[f"₹{v:,.0f}" for v in edu_rev["AvgRevenue"]],
+                showscale=False),
+            text=[f"₹{v:,.0f}"
+                  for v in edu_rev["AvgRevenue"]],
             textposition="outside",
-            textfont=dict(size=12, color="#1a0030"),
+            textfont=dict(size=11, color="#1a0030"),
             hovertemplate="<b>%{x}</b><br>"
-                          "₹%{y:,.0f}<extra></extra>"
+                "₹%{y:,.0f}<extra></extra>"
         ))
-        fig5.update_layout(
-            title=dict(text="Revenue by Education",
-                       font=dict(size=15, color="#4a0080")),
-            yaxis_title="Avg Revenue (₹)",
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            height=340,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig5, width='stretch')
+        fig5.update_layout(yaxis_title="Avg Revenue (₹)",
+            **make_layout("Revenue by Education", 340))
+        st.plotly_chart(fig5, use_container_width=True)
 
     with col6:
         marital_rev = fdf.groupby("MaritalStatus")\
-                         ["MonthlyRevenue"].mean().reset_index()
+                         ["MonthlyRevenue"].mean()\
+                         .reset_index()
         marital_cnt = fdf["MaritalStatus"]\
                          .value_counts().reset_index()
         marital_cnt.columns = ["MaritalStatus","Count"]
-        m_data = marital_rev.merge(marital_cnt,
-                                    on="MaritalStatus")
+        m_data = marital_rev.merge(
+            marital_cnt, on="MaritalStatus")
         fig6 = px.scatter(m_data,
             x="MonthlyRevenue", y="Count",
-            size="MonthlyRevenue", color="MaritalStatus",
+            size="MonthlyRevenue",
+            color="MaritalStatus",
             text="MaritalStatus",
             color_discrete_sequence=["#7b2d8b","#c2185b",
                                       "#f39c12","#2980b9"],
@@ -549,27 +676,19 @@ with tab1:
         fig6.update_traces(
             textposition="top center",
             textfont=dict(size=12, color="#1a0030"))
-        fig6.update_layout(
-            height=340, showlegend=False,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig6, width='stretch')
+        fig6.update_layout(showlegend=False,
+            **make_layout(
+                "Marital Status: Count vs Revenue",340))
+        st.plotly_chart(fig6, use_container_width=True)
 
     st.markdown("""
     <div class="insight-card">
-        💡 <b>Graduate entrepreneurs earn 35–40% more</b> than
-        those with no formal education — making education-linked
-        training a top priority for the portal.
+        💡 <b>Graduate entrepreneurs earn 35–40% more</b>
+        than those with no formal education.
     </div>
     <div class="insight-card">
         💡 <b>The 36–45 age group dominates</b> the platform.
-        The 18–25 group shows highest growth potential and
-        needs targeted onboarding support.
+        The 18–25 group needs targeted onboarding support.
     </div>""", unsafe_allow_html=True)
 
 
@@ -582,11 +701,12 @@ with tab2:
         <span style='font-size:1.6rem;'>🗺️</span>
         <div>
             <p class="section-title">Geographic Intelligence</p>
-            <p class="section-subtitle">Zone, state & rural-urban performance</p>
+            <p class="section-subtitle">Zone, state &
+            rural-urban performance</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+    col1,col2 = st.columns(2)
 
     with col1:
         zone_data = fdf.groupby("Zone").agg(
@@ -595,45 +715,38 @@ with tab2:
             DropoutRate=("PortalDropout","mean"),
             DigitalScore=("DigitalScore","mean"),
             Thriving=("GrowthStage",
-                      lambda x: (x=="Thriving").mean())
+                lambda x:(x=="Thriving").mean())
         ).reset_index()
-        fig = px.bar(zone_data, x="Zone", y="AvgRevenue",
+        fig = px.bar(zone_data,
+            x="Zone", y="AvgRevenue",
             color="Zone",
             color_discrete_map=ZONE_COLORS,
-            text=[f"₹{v:,.0f}" for v in zone_data["AvgRevenue"]],
+            text=[f"₹{v:,.0f}"
+                  for v in zone_data["AvgRevenue"]],
             custom_data=["Count","DropoutRate","Thriving"],
-            labels={"AvgRevenue":"Avg Revenue (₹)","Zone":""},
+            labels={"AvgRevenue":"Avg Revenue (₹)",
+                    "Zone":""},
             title="Zone-wise Avg Monthly Revenue")
         fig.update_traces(
             textposition="outside",
             textfont=dict(size=12, color="#1a0030"),
             hovertemplate="<b>%{x}</b><br>"
-                          "Revenue: ₹%{y:,.0f}<br>"
-                          "Count: %{customdata[0]:,}<br>"
-                          "Dropout: %{customdata[1]:.1%}<br>"
-                          "Thriving: %{customdata[2]:.1%}"
-                          "<extra></extra>"
-        )
-        fig.update_layout(
-            showlegend=False, height=400,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030"))
-        )
-        st.plotly_chart(fig, width='stretch')
+                "Revenue: ₹%{y:,.0f}<br>"
+                "Count: %{customdata[0]:,}<br>"
+                "Dropout: %{customdata[1]:.1%}<br>"
+                "Thriving: %{customdata[2]:.1%}"
+                "<extra></extra>")
+        fig.update_layout(showlegend=False,
+            **make_layout(
+                "Zone-wise Avg Monthly Revenue",400))
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         fig2 = px.scatter(zone_data,
             x="DigitalScore", y="AvgRevenue",
             size="Count", color="Zone", text="Zone",
-            color_discrete_map=ZONE_COLORS, size_max=55,
+            color_discrete_map=ZONE_COLORS,
+            size_max=55,
             labels={"DigitalScore":"Avg Digital Score",
                     "AvgRevenue":"Avg Revenue (₹)"},
             title="Digital Score vs Revenue by Zone")
@@ -641,32 +754,24 @@ with tab2:
             textposition="top center",
             textfont=dict(size=12, color="#1a0030"),
             hovertemplate="<b>%{text}</b><br>"
-                          "Score: %{x:.2f}<br>"
-                          "Revenue: ₹%{y:,.0f}"
-                          "<extra></extra>"
-        )
-        fig2.update_layout(
-            showlegend=False, height=400,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig2, width='stretch')
+                "Score: %{x:.2f}<br>"
+                "Revenue: ₹%{y:,.0f}<extra></extra>")
+        fig2.update_layout(showlegend=False,
+            **make_layout(
+                "Digital Score vs Revenue",400))
+        st.plotly_chart(fig2, use_container_width=True)
 
-    # State level
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>📍</span>
         <div>
             <p class="section-title">State-wise Deep Dive</p>
-            <p class="section-subtitle">Revenue rankings & risk matrix</p>
+            <p class="section-subtitle">Revenue rankings
+            & risk matrix</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col3, col4 = st.columns(2)
+    col3,col4 = st.columns(2)
 
     with col3:
         state_data = fdf.groupby("State").agg(
@@ -674,9 +779,9 @@ with tab2:
             AvgRevenue=("MonthlyRevenue","mean"),
             DropoutRate=("PortalDropout","mean"),
             Thriving=("GrowthStage",
-                      lambda x: (x=="Thriving").mean())
-        ).reset_index().sort_values("AvgRevenue",
-                                     ascending=True)
+                lambda x:(x=="Thriving").mean())
+        ).reset_index().sort_values(
+            "AvgRevenue",ascending=True)
         fig3 = go.Figure(go.Bar(
             x=state_data["AvgRevenue"],
             y=state_data["State"],
@@ -687,40 +792,26 @@ with tab2:
                              [0.5,"#c2185b"],
                              [1,"#4a0080"]],
                 showscale=True,
-                colorbar=dict(title="₹",thickness=12,
-                              tickfont=dict(size=11,
-                                            color="#1a0030"))
-            ),
+                colorbar=dict(title="₹",thickness=12)),
             text=[f"₹{v:,.0f}"
                   for v in state_data["AvgRevenue"]],
             textposition="outside",
             textfont=dict(size=11, color="#1a0030"),
-            customdata=state_data[["Count","DropoutRate",
-                                    "Thriving"]].values,
+            customdata=state_data[
+                ["Count","DropoutRate","Thriving"]].values,
             hovertemplate="<b>%{y}</b><br>"
-                          "Revenue: ₹%{x:,.0f}<br>"
-                          "Count: %{customdata[0]:,}<br>"
-                          "Dropout: %{customdata[1]:.1%}<br>"
-                          "Thriving: %{customdata[2]:.1%}"
-                          "<extra></extra>"
+                "Revenue: ₹%{x:,.0f}<br>"
+                "Count: %{customdata[0]:,}<br>"
+                "Dropout: %{customdata[1]:.1%}<br>"
+                "Thriving: %{customdata[2]:.1%}"
+                "<extra></extra>"
         ))
         fig3.update_layout(
-            title=dict(text="All States — Avg Monthly Revenue",
-                       font=dict(size=15, color="#4a0080")),
             xaxis_title="Avg Revenue (₹)",
             yaxis_title="",
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            height=520,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig3, width='stretch')
+            **make_layout(
+                "All States — Avg Monthly Revenue",520))
+        st.plotly_chart(fig3, use_container_width=True)
 
     with col4:
         state_bubble = fdf.groupby("State").agg(
@@ -739,42 +830,29 @@ with tab2:
             labels={"DropoutRate":"Dropout Rate",
                     "AvgRevenue":"Avg Revenue (₹)",
                     "DigitalScore":"Digital Score"},
-            title="State Risk Matrix: Revenue vs Dropout")
+            title="State Risk Matrix")
         fig4.update_traces(
             textposition="top center",
             textfont=dict(size=10, color="#1a0030"),
             hovertemplate="<b>%{text}</b><br>"
-                          "Dropout: %{x:.1%}<br>"
-                          "Revenue: ₹%{y:,.0f}"
-                          "<extra></extra>"
-        )
-        fig4.update_xaxes(
-            tickformat=".0%",
-            tickfont=dict(size=12, color="#1a0030"))
-        fig4.update_yaxes(
-            tickfont=dict(size=12, color="#1a0030"))
-        fig4.update_layout(
-            height=520,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig4, width='stretch')
+                "Dropout: %{x:.1%}<br>"
+                "Revenue: ₹%{y:,.0f}<extra></extra>")
+        fig4.update_xaxes(tickformat=".0%")
+        fig4.update_layout(**make_layout(
+            "State Risk Matrix",520))
+        st.plotly_chart(fig4, use_container_width=True)
 
-    # Radar
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>🏘️</span>
         <div>
             <p class="section-title">Area Type Comparison</p>
-            <p class="section-subtitle">Multi-dimension radar analysis</p>
+            <p class="section-subtitle">Multi-dimension
+            radar analysis</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col5, col6 = st.columns(2)
+    col5,col6 = st.columns(2)
     with col5:
         area_comp = fdf.groupby("AreaType").agg(
             AvgRevenue=("MonthlyRevenue","mean"),
@@ -783,17 +861,18 @@ with tab2:
             LoanUptake=("HasLoan","mean"),
             TrainingsAttended=("TrainingsAttended","mean"),
             Thriving=("GrowthStage",
-                      lambda x: (x=="Thriving").mean())
+                lambda x:(x=="Thriving").mean())
         ).reset_index()
         cats    = ["Revenue","Digital","SHG",
                    "Loan","Training","Thriving"]
         metrics = ["AvgRevenue","DigitalScore","SHGMember",
-                   "LoanUptake","TrainingsAttended","Thriving"]
+                   "LoanUptake","TrainingsAttended",
+                   "Thriving"]
         area_colors = {"Rural":"#e74c3c",
                        "Semi-Urban":"#f39c12",
                        "Urban":"#27ae60"}
         fig5 = go.Figure()
-        for _, row in area_comp.iterrows():
+        for _,row in area_comp.iterrows():
             raw  = [row[m] for m in metrics]
             mn   = [min(area_comp[m]) for m in metrics]
             mx   = [max(area_comp[m]) for m in metrics]
@@ -808,31 +887,13 @@ with tab2:
                     row["AreaType"],"gray"),
                 fillcolor=area_colors.get(
                     row["AreaType"],"gray"),
-                opacity=0.25
-            ))
+                opacity=0.25))
         fig5.update_layout(
-            polar=dict(
-                radialaxis=dict(
-                    visible=True, range=[0,1],
-                    tickfont=dict(size=11,
-                                   color="#1a0030")),
-                angularaxis=dict(
-                    tickfont=dict(size=12,
-                                   color="#1a0030"))
-            ),
-            title=dict(
-                text="Area Type Multi-Dimension Radar",
-                font=dict(size=15, color="#4a0080")),
-            height=420,
-            paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            legend=dict(font=dict(size=12,
-                                   color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=60,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig5, width='stretch')
+            polar=dict(radialaxis=dict(
+                visible=True,range=[0,1])),
+            **make_layout(
+                "Area Type Radar",420,True))
+        st.plotly_chart(fig5, use_container_width=True)
 
     with col6:
         area_table = fdf.groupby("AreaType").agg(
@@ -844,37 +905,30 @@ with tab2:
             SHGMember=("SHGMember","mean"),
             LoanAccess=("HasLoan","mean"),
             Thriving=("GrowthStage",
-                      lambda x: (x=="Thriving").mean())
+                lambda x:(x=="Thriving").mean())
         ).reset_index()
-        area_table["AvgRevenue"]  = area_table["AvgRevenue"]\
-            .apply(lambda x: f"₹{x:,.0f}")
-        area_table["AvgProfit"]   = area_table["AvgProfit"]\
-            .apply(lambda x: f"₹{x:,.0f}")
-        area_table["DigitalScore"]= area_table["DigitalScore"]\
-            .apply(lambda x: f"{x:.2f}/4")
-        area_table["DropoutRate"] = area_table["DropoutRate"]\
-            .apply(lambda x: f"{x:.1%}")
-        area_table["SHGMember"]   = area_table["SHGMember"]\
-            .apply(lambda x: f"{x:.1%}")
-        area_table["LoanAccess"]  = area_table["LoanAccess"]\
-            .apply(lambda x: f"{x:.1%}")
-        area_table["Thriving"]    = area_table["Thriving"]\
-            .apply(lambda x: f"{x:.1%}")
+        for col_name,fmt in [
+            ("AvgRevenue","₹{:,.0f}"),
+            ("AvgProfit","₹{:,.0f}")]:
+            area_table[col_name] = area_table[col_name]\
+                .apply(lambda x:fmt.format(x))
+        for col_name in ["DropoutRate","SHGMember",
+                          "LoanAccess","Thriving"]:
+            area_table[col_name] = area_table[col_name]\
+                .apply(lambda x:f"{x:.1%}")
+        area_table["DigitalScore"] = area_table[
+            "DigitalScore"].apply(lambda x:f"{x:.2f}/4")
         st.markdown("#### 📋 Area-wise Summary Table")
-        st.dataframe(area_table, width='stretch',
-                     hide_index=True, height=340)
+        st.dataframe(area_table,
+            use_container_width=True,
+            hide_index=True, height=340)
 
     st.markdown("""
     <div class="insight-card">
         💡 <b>West Zone leads</b> in avg revenue (₹22,627)
-        while Northeast has the lowest digital adoption (1.77/4).
-        High-dropout states also show below-average revenue —
-        a compounding vulnerability needing urgent intervention.
+        while Northeast has lowest digital adoption (1.77/4).
+        High-dropout states also show below-average revenue.
     </div>""", unsafe_allow_html=True)
-# ============================================================
-#  PIECE 5/6 — Tab 3: Business & Growth + Tab 4: Digital
-# ============================================================
-
 # ══════════════════════════════════════════════════════════════
 #  TAB 3 — BUSINESS & GROWTH
 # ══════════════════════════════════════════════════════════════
@@ -883,12 +937,14 @@ with tab3:
     <div class="section-header">
         <span style='font-size:1.6rem;'>📈</span>
         <div>
-            <p class="section-title">Business & Growth Analytics</p>
-            <p class="section-subtitle">Category revenue, profit margins & tenure trends</p>
+            <p class="section-title">Business & Growth
+            Analytics</p>
+            <p class="section-subtitle">Category revenue,
+            profit margins & tenure trends</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+    col1,col2 = st.columns(2)
     with col1:
         biz = fdf.groupby("BusinessCategory").agg(
             AvgRevenue=("MonthlyRevenue","mean"),
@@ -905,37 +961,25 @@ with tab3:
                 colorscale=[[0,"#f9c6d0"],
                              [0.5,"#8b0057"],
                              [1,"#4a0080"]],
-                showscale=False
-            ),
-            text=[f"₹{v:,.0f}" for v in biz["AvgRevenue"]],
+                showscale=False),
+            text=[f"₹{v:,.0f}"
+                  for v in biz["AvgRevenue"]],
             textposition="outside",
-            textfont=dict(size=12, color="#1a0030"),
+            textfont=dict(size=11, color="#1a0030"),
             customdata=biz[["Count","AvgProfit",
-                             "OnlineSellers"]].values,
+                "OnlineSellers"]].values,
             hovertemplate="<b>%{y}</b><br>"
-                          "Revenue: ₹%{x:,.0f}<br>"
-                          "Profit: ₹%{customdata[1]:,.0f}<br>"
-                          "Count: %{customdata[0]:,}<br>"
-                          "Online: %{customdata[2]:.1%}"
-                          "<extra></extra>"
+                "Revenue: ₹%{x:,.0f}<br>"
+                "Profit: ₹%{customdata[1]:,.0f}<br>"
+                "Count: %{customdata[0]:,}<br>"
+                "Online: %{customdata[2]:.1%}"
+                "<extra></extra>"
         ))
         fig.update_layout(
-            title=dict(text="Avg Revenue by Category",
-                       font=dict(size=15, color="#4a0080")),
             xaxis_title="Avg Revenue (₹)",
             yaxis_title="",
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            height=440,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=20)
-        )
-        st.plotly_chart(fig, width='stretch')
+            **make_layout("Avg Revenue by Category",440))
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         fig2 = px.scatter(biz,
@@ -948,27 +992,18 @@ with tab3:
             labels={"AvgRevenue":"Avg Revenue (₹)",
                     "AvgProfit":"Avg Profit (₹)",
                     "OnlineSellers":"Online %"},
-            title="Revenue vs Profit Bubble Chart")
+            title="Revenue vs Profit Bubble")
         fig2.update_traces(
             textposition="top center",
             textfont=dict(size=9, color="#1a0030"),
             hovertemplate="<b>%{text}</b><br>"
-                          "Revenue: ₹%{x:,.0f}<br>"
-                          "Profit: ₹%{y:,.0f}"
-                          "<extra></extra>"
-        )
-        fig2.update_layout(
-            height=440,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig2, width='stretch')
+                "Revenue: ₹%{x:,.0f}<br>"
+                "Profit: ₹%{y:,.0f}<extra></extra>")
+        fig2.update_layout(**make_layout(
+            "Revenue vs Profit Bubble",440))
+        st.plotly_chart(fig2, use_container_width=True)
 
-    col3, col4 = st.columns(2)
+    col3,col4 = st.columns(2)
     with col3:
         margin_data = fdf.groupby("BusinessCategory")\
                          ["ProfitMargin"].mean()\
@@ -986,22 +1021,12 @@ with tab3:
             title="Profit Margin % by Category")
         fig3.update_traces(
             textposition="outside",
-            textfont=dict(size=12, color="#1a0030"))
+            textfont=dict(size=11, color="#1a0030"))
         fig3.update_layout(
             coloraxis_showscale=False,
-            height=400,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            margin=dict(t=50,b=20,l=10,r=20)
-        )
-        st.plotly_chart(fig3, width='stretch')
+            **make_layout(
+                "Profit Margin % by Category",400))
+        st.plotly_chart(fig3, use_container_width=True)
 
     with col4:
         tenure_data = fdf.groupby("YearsInBusiness").agg(
@@ -1015,9 +1040,8 @@ with tab3:
             y=tenure_data["Count"],
             name="Count", yaxis="y2",
             marker_color="rgba(194,24,91,0.15)",
-            hovertemplate="Year %{x}: %{y} entrepreneurs"
-                          "<extra></extra>"
-        ))
+            hovertemplate="Year %{x}: %{y}"
+                "<extra></extra>"))
         fig4.add_trace(go.Scatter(
             x=tenure_data["YearsInBusiness"],
             y=tenure_data["AvgRevenue"],
@@ -1026,58 +1050,42 @@ with tab3:
             line=dict(color="#8b0057", width=3),
             marker=dict(size=9, color="#8b0057"),
             hovertemplate="Year %{x}: ₹%{y:,.0f}"
-                          "<extra></extra>"
-        ))
+                "<extra></extra>"))
         fig4.add_trace(go.Scatter(
             x=tenure_data["YearsInBusiness"],
             y=tenure_data["MedianRevenue"],
             mode="lines+markers",
             name="Median Revenue",
-            line=dict(color="#c2185b", width=2,
+            line=dict(color="#c2185b",width=2,
                       dash="dot"),
             marker=dict(size=7, color="#c2185b"),
             hovertemplate="Year %{x}: ₹%{y:,.0f}"
-                          "<extra></extra>"
-        ))
+                "<extra></extra>"))
         fig4.update_layout(
-            title=dict(
-                text="Revenue Growth vs Years in Business",
-                font=dict(size=15, color="#4a0080")),
             xaxis_title="Years in Business",
             yaxis_title="Monthly Revenue (₹)",
             yaxis2=dict(
-    title=dict(
-        text="Count",
-        font=dict(size=12, color="#1a0030")
-    ),
-    overlaying="y", side="right",
-    showgrid=False,
-    tickfont=dict(size=11, color="#1a0030")
-),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            height=400,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
+                title=dict(text="Count",
+                    font=dict(size=12,
+                               color="#1a0030")),
+                overlaying="y", side="right",
+                showgrid=False,
+                tickfont=dict(size=11,
+                               color="#1a0030")),
             legend=dict(orientation="h", y=1.12,
-                        font=dict(size=12,
-                                   color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=60,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig4, width='stretch')
+                font=dict(size=12, color="#1a0030"),
+                bgcolor="rgba(255,255,255,0.8)"),
+            **make_layout(
+                "Revenue Growth vs Years",400))
+        st.plotly_chart(fig4, use_container_width=True)
 
-    # Heatmap
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>🔥</span>
         <div>
             <p class="section-title">Revenue Heatmap</p>
-            <p class="section-subtitle">Business Category × Area Type</p>
+            <p class="section-subtitle">Category × Area
+            Type interaction</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
@@ -1092,29 +1100,16 @@ with tab3:
                                   [1,"#4a0080"]],
         text_auto=".0f", aspect="auto",
         labels={"color":"Avg Revenue (₹)"},
-        title="Avg Revenue (₹): Category × Area Type")
-    fig5.update_layout(
-        height=420,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Poppins", size=13,
-                  color="#1a0030"),
-        title_font=dict(size=15, color="#4a0080"),
-        xaxis=dict(tickfont=dict(size=12,
-                                  color="#1a0030")),
-        yaxis=dict(tickfont=dict(size=11,
-                                  color="#1a0030")),
-        margin=dict(t=50,b=20,l=10,r=10)
-    )
-    st.plotly_chart(fig5, width='stretch')
+        title="Avg Revenue: Category × Area Type")
+    fig5.update_layout(**make_layout(
+        "Avg Revenue: Category × Area Type",420))
+    st.plotly_chart(fig5, use_container_width=True)
 
     st.markdown("""
     <div class="insight-card">
-        💡 <b>Digital Services (₹32,498) and Retail & Trading
-        (₹30,222)</b> are top-earning categories. Urban
-        entrepreneurs earn 35–45% more than Rural peers.
-        Handicraft & Agriculture need focused revenue
-        enhancement programs.
+        💡 <b>Digital Services (₹32,498) and Retail &
+        Trading (₹30,222)</b> are top-earning categories.
+        Urban entrepreneurs earn 35–45% more than Rural.
     </div>""", unsafe_allow_html=True)
 
 
@@ -1126,37 +1121,46 @@ with tab4:
     <div class="section-header">
         <span style='font-size:1.6rem;'>💻</span>
         <div>
-            <p class="section-title">Digital Adoption Intelligence</p>
-            <p class="section-subtitle">Smartphone, payments, social media & online selling</p>
+            <p class="section-title">Digital Adoption
+            Intelligence</p>
+            <p class="section-subtitle">Smartphone, payments,
+            social media & online selling</p>
         </div>
     </div>""", unsafe_allow_html=True)
-# Digital KPI cards
-    d1, d2, d3, d4 = st.columns(4)
+
+    d1,d2,d3,d4 = st.columns(4)
     dig_kpis = {
-        "📱 Smartphone":   (fdf["HasSmartphone"].mean(),    "#7b2d8b"),
-        "💳 Digital Pay":  (fdf["UsesDigitalPayment"].mean(),"#c2185b"),
-        "📲 Social Media": (fdf["UsesSocialMedia"].mean(),   "#2980b9"),
-        "🛒 Sells Online": (fdf["SellsOnline"].mean(),       "#27ae60"),
+        "📱 Smartphone":
+            (fdf["HasSmartphone"].mean(),"#7b2d8b"),
+        "💳 Digital Pay":
+            (fdf["UsesDigitalPayment"].mean(),"#c2185b"),
+        "📲 Social Media":
+            (fdf["UsesSocialMedia"].mean(),"#2980b9"),
+        "🛒 Sells Online":
+            (fdf["SellsOnline"].mean(),"#27ae60"),
     }
-    for col_obj, (label, (val, color)) in zip(
-        [d1,d2,d3,d4], dig_kpis.items()
-    ):
+    for col_obj,(label,(val,color)) in zip(
+        [d1,d2,d3,d4], dig_kpis.items()):
         col_obj.markdown(f"""
-        <div style='background:white; border-radius:14px;
-                    padding:20px; border-top:4px solid {color};
+        <div style='background:white;
+                    border-radius:14px; padding:20px;
+                    border-top:4px solid {color};
                     text-align:center;
-                    box-shadow:0 4px 16px rgba(74,0,128,0.1);'>
-            <div style='font-size:2rem;'>{label.split()[0]}</div>
-            <div style='font-size:1.9rem; font-weight:800;
-                        color:{color}; margin:6px 0;'>{val:.1%}</div>
+                    box-shadow:0 4px 16px
+                    rgba(74,0,128,0.1);'>
+            <div style='font-size:2rem;'>
+                {label.split()[0]}</div>
+            <div style='font-size:1.9rem;
+                        font-weight:800;
+                        color:{color}; margin:6px 0;'>
+                {val:.1%}</div>
             <div style='font-size:0.85rem; color:#333;
                         font-weight:600;'>
-                {" ".join(label.split()[1:])}
-            </div>
+                {" ".join(label.split()[1:])}</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
+    col1,col2 = st.columns(2)
 
     with col1:
         dig_stage = fdf.groupby(
@@ -1171,19 +1175,9 @@ with tab4:
                     "Count":"Entrepreneurs",
                     "GrowthStage":"Stage"},
             title="Digital Score by Growth Stage")
-        fig.update_layout(
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13, color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=12, color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12, color="#1a0030")),
-            legend=dict(font=dict(size=12, color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig, width='stretch')
+        fig.update_layout(**make_layout(
+            "Digital Score by Growth Stage",380,True))
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         dig_rev = fdf.groupby("DigitalScore").agg(
@@ -1196,60 +1190,56 @@ with tab4:
             y=dig_rev["Count"],
             name="Count", yaxis="y2",
             marker_color="rgba(194,24,91,0.15)",
-            hovertemplate="Score %{x}: %{y}<extra></extra>"
-        ))
+            hovertemplate="Score %{x}: %{y}"
+                "<extra></extra>"))
         fig2.add_trace(go.Scatter(
             x=dig_rev["DigitalScore"],
             y=dig_rev["AvgRevenue"],
             mode="lines+markers+text",
             name="Avg Revenue",
-            text=[f"₹{v:,.0f}" for v in dig_rev["AvgRevenue"]],
+            text=[f"₹{v:,.0f}"
+                  for v in dig_rev["AvgRevenue"]],
             textposition="top center",
             textfont=dict(size=11, color="#1a0030"),
             line=dict(color="#8b0057", width=3),
             marker=dict(size=12, color="#8b0057"),
-            hovertemplate="Score %{x}: ₹%{y:,.0f}<extra></extra>"
-        ))
+            hovertemplate="Score %{x}: ₹%{y:,.0f}"
+                "<extra></extra>"))
         fig2.update_layout(
-            title=dict(text="Digital Score vs Avg Revenue",
-                       font=dict(size=15, color="#4a0080")),
             xaxis_title="Digital Score",
             yaxis_title="Avg Revenue (₹)",
             yaxis2=dict(
                 title=dict(text="Count",
-                           font=dict(size=12, color="#1a0030")),
+                    font=dict(size=12,
+                               color="#1a0030")),
                 overlaying="y", side="right",
                 showgrid=False,
-                tickfont=dict(size=11, color="#1a0030")
-            ),
-            xaxis=dict(tickfont=dict(size=12, color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12, color="#1a0030")),
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13, color="#1a0030"),
+                tickfont=dict(size=11,
+                               color="#1a0030")),
             legend=dict(orientation="h", y=1.12,
-                        font=dict(size=12, color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=60,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig2, width='stretch')
+                font=dict(size=12, color="#1a0030"),
+                bgcolor="rgba(255,255,255,0.8)"),
+            **make_layout(
+                "Digital Score vs Avg Revenue",380))
+        st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>📡</span>
         <div>
-            <p class="section-title">Digital Divide Analysis</p>
-            <p class="section-subtitle">Area-wise gap & online selling by category</p>
+            <p class="section-title">Digital Divide
+            Analysis</p>
+            <p class="section-subtitle">Area-wise gap &
+            online selling by category</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col3, col4 = st.columns(2)
+    col3,col4 = st.columns(2)
     with col3:
         dig_cols = ["HasSmartphone","UsesDigitalPayment",
                     "UsesSocialMedia","SellsOnline"]
-        dig_gap = fdf.groupby("AreaType")[dig_cols]\
-                     .mean().reset_index()
+        dig_gap  = fdf.groupby("AreaType")[dig_cols]\
+                      .mean().reset_index()
         dig_melt = dig_gap.melt(
             id_vars="AreaType",
             var_name="Metric", value_name="Rate")
@@ -1257,38 +1247,33 @@ with tab4:
             "HasSmartphone":     "Smartphone",
             "UsesDigitalPayment":"Digital Pay",
             "UsesSocialMedia":   "Social Media",
-            "SellsOnline":       "Sells Online"
-        })
+            "SellsOnline":       "Sells Online"})
         fig3 = px.bar(dig_melt,
             x="Metric", y="Rate", color="AreaType",
             barmode="group",
-            color_discrete_map={"Rural":"#e74c3c",
-                                 "Semi-Urban":"#f39c12",
-                                 "Urban":"#27ae60"},
-            text=dig_melt["Rate"].apply(lambda x: f"{x:.0%}"),
+            color_discrete_map={
+                "Rural":"#e74c3c",
+                "Semi-Urban":"#f39c12",
+                "Urban":"#27ae60"},
+            text=dig_melt["Rate"].apply(
+                lambda x:f"{x:.0%}"),
             labels={"Rate":"Adoption Rate","Metric":""},
             title="Digital Adoption: Rural vs Urban")
         fig3.update_traces(
             textposition="outside",
             textfont=dict(size=11, color="#1a0030"))
         fig3.update_layout(
-            yaxis_tickformat=".0%", height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13, color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=12, color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12, color="#1a0030")),
-            legend=dict(font=dict(size=12, color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig3, width='stretch')
+            yaxis_tickformat=".0%",
+            **make_layout(
+                "Digital Adoption by Area",380,True))
+        st.plotly_chart(fig3, use_container_width=True)
 
     with col4:
         online_cat = fdf.groupby("BusinessCategory")\
-                        ["SellsOnline"].mean().reset_index()\
-                        .sort_values("SellsOnline", ascending=True)
+                        ["SellsOnline"].mean()\
+                        .reset_index()\
+                        .sort_values("SellsOnline",
+                                      ascending=True)
         online_cat.columns = ["Category","OnlineRate"]
         fig4 = go.Figure(go.Bar(
             x=online_cat["OnlineRate"],
@@ -1296,43 +1281,31 @@ with tab4:
             orientation="h",
             marker=dict(
                 color=online_cat["OnlineRate"],
-                colorscale=[[0,"#f0f0ff"],[0.5,"#7b2d8b"],
+                colorscale=[[0,"#f0f0ff"],
+                             [0.5,"#7b2d8b"],
                              [1,"#4a0080"]],
-                showscale=False
-            ),
-            text=[f"{v:.1%}" for v in online_cat["OnlineRate"]],
+                showscale=False),
+            text=[f"{v:.1%}"
+                  for v in online_cat["OnlineRate"]],
             textposition="outside",
             textfont=dict(size=11, color="#1a0030"),
-            hovertemplate="<b>%{y}</b><br>Online: %{x:.1%}<extra></extra>"
-        ))
+            hovertemplate="<b>%{y}</b><br>"
+                "Online: %{x:.1%}<extra></extra>"))
         fig4.update_layout(
-            title=dict(text="Online Selling Rate by Category",
-                       font=dict(size=15, color="#4a0080")),
             xaxis_title="Adoption Rate",
             xaxis_tickformat=".0%",
             yaxis_title="",
-            xaxis=dict(tickfont=dict(size=11, color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11, color="#1a0030")),
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12, color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=20)
-        )
-        st.plotly_chart(fig4, width='stretch')
+            **make_layout(
+                "Online Selling by Category",380))
+        st.plotly_chart(fig4, use_container_width=True)
 
     st.markdown("""
     <div class="insight-card">
-        💡 <b>Urban smartphone penetration is 25–30% higher</b>
-        than Rural, creating a compounding digital gap.
-        Home Decor & Textile lead online selling (29–30%),
-        while Agriculture & Dairy (23%) need e-commerce
-        enablement support.
+        💡 <b>Urban smartphone penetration is 25–30%
+        higher</b> than Rural, creating a compounding
+        digital gap. Agriculture & Dairy (23%) need
+        e-commerce enablement support.
     </div>""", unsafe_allow_html=True)
-# ============================================================
-#  PIECE 6/6 — Tab 5: Training + Tab 6: Dropout + Footer
-# ============================================================
-
 # ══════════════════════════════════════════════════════════════
 #  TAB 5 — TRAINING & SCHEMES
 # ══════════════════════════════════════════════════════════════
@@ -1341,12 +1314,14 @@ with tab5:
     <div class="section-header">
         <span style='font-size:1.6rem;'>🎓</span>
         <div>
-            <p class="section-title">Training & Government Schemes</p>
-            <p class="section-subtitle">Skill training impact, SHG membership & loan schemes</p>
+            <p class="section-title">Training & Government
+            Schemes</p>
+            <p class="section-subtitle">Skill training impact,
+            SHG membership & loan schemes</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+    col1,col2 = st.columns(2)
     with col1:
         train_data = fdf.groupby("TrainingsAttended").agg(
             AvgRevenue=("MonthlyRevenue","mean"),
@@ -1360,8 +1335,7 @@ with tab5:
             name="Count", yaxis="y2",
             marker_color="rgba(194,24,91,0.15)",
             hovertemplate="Trainings %{x}: %{y}"
-                          "<extra></extra>"
-        ))
+                "<extra></extra>"))
         fig.add_trace(go.Scatter(
             x=train_data["TrainingsAttended"],
             y=train_data["AvgRevenue"],
@@ -1374,95 +1348,72 @@ with tab5:
             line=dict(color="#8b0057", width=3),
             marker=dict(size=10, color="#8b0057"),
             hovertemplate="Trainings %{x}: ₹%{y:,.0f}"
-                          "<extra></extra>"
-        ))
+                "<extra></extra>"))
         fig.update_layout(
-            title=dict(
-                text="Training Attendance → Revenue Impact",
-                font=dict(size=15, color="#4a0080")),
             xaxis_title="Trainings Attended",
             yaxis_title="Avg Revenue (₹)",
-            yaxis2=dict(title="Count",
-                        overlaying="y", side="right",
-                        showgrid=False,
-                        tickfont=dict(size=11,
-                                      color="#1a0030")),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
+            yaxis2=dict(
+                title=dict(text="Count",
+                    font=dict(size=12,
+                               color="#1a0030")),
+                overlaying="y", side="right",
+                showgrid=False,
+                tickfont=dict(size=11,
+                               color="#1a0030")),
             legend=dict(orientation="h", y=1.12,
-                        font=dict(size=12,
-                                   color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=60,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig, width='stretch')
+                font=dict(size=12, color="#1a0030"),
+                bgcolor="rgba(255,255,255,0.8)"),
+            **make_layout(
+                "Training → Revenue Impact",380))
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         ttype = fdf.groupby("TrainingType").agg(
             AvgRevenue=("MonthlyRevenue","mean"),
             Count=("EntrepreneurID","count")
-        ).reset_index().sort_values("AvgRevenue",
-                                     ascending=True)
+        ).reset_index().sort_values(
+            "AvgRevenue",ascending=True)
         fig2 = go.Figure(go.Bar(
             x=ttype["AvgRevenue"],
             y=ttype["TrainingType"],
             orientation="h",
             marker=dict(
                 color=ttype["AvgRevenue"],
-                colorscale=[[0,"#f9c6d0"],[1,"#4a0080"]],
-                showscale=False
-            ),
+                colorscale=[[0,"#f9c6d0"],
+                             [1,"#4a0080"]],
+                showscale=False),
             text=[f"₹{v:,.0f}"
                   for v in ttype["AvgRevenue"]],
             textposition="outside",
             textfont=dict(size=11, color="#1a0030"),
             customdata=ttype["Count"].values,
             hovertemplate="<b>%{y}</b><br>"
-                          "Revenue: ₹%{x:,.0f}<br>"
-                          "Count: %{customdata:,}"
-                          "<extra></extra>"
-        ))
+                "Revenue: ₹%{x:,.0f}<br>"
+                "Count: %{customdata:,}<extra></extra>"))
         fig2.update_layout(
-            title=dict(text="Revenue by Training Type",
-                       font=dict(size=15, color="#4a0080")),
             xaxis_title="Avg Revenue (₹)",
             yaxis_title="",
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=20)
-        )
-        st.plotly_chart(fig2, width='stretch')
+            **make_layout(
+                "Revenue by Training Type",380))
+        st.plotly_chart(fig2, use_container_width=True)
 
-    # SHG & Mentor
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>🤝</span>
         <div>
-            <p class="section-title">Support Network Impact</p>
-            <p class="section-subtitle">SHG & mentorship effect on growth</p>
+            <p class="section-title">Support Network
+            Impact</p>
+            <p class="section-subtitle">SHG & mentorship
+            effect on growth</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    col3, col4 = st.columns(2)
+    col3,col4 = st.columns(2)
     with col3:
         shg = fdf.groupby(["SHGMember","GrowthStage"])\
                   .size().reset_index(name="Count")
         shg["SHGMember"] = shg["SHGMember"].map(
-            {0:"❌ Non-SHG", 1:"✅ SHG Member"})
+            {0:"❌ Non-SHG",1:"✅ SHG Member"})
         fig3 = px.bar(shg,
             x="SHGMember", y="Count",
             color="GrowthStage",
@@ -1472,29 +1423,15 @@ with tab5:
                     "Count":"Entrepreneurs",
                     "GrowthStage":"Stage"},
             title="SHG Membership → Growth Stage")
-        fig3.update_layout(
-            height=360,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            legend=dict(font=dict(size=12,
-                                   color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig3, width='stretch')
+        fig3.update_layout(**make_layout(
+            "SHG Membership → Growth Stage",360,True))
+        st.plotly_chart(fig3, use_container_width=True)
 
     with col4:
         mentor = fdf.groupby(["HasMentor","GrowthStage"])\
                     .size().reset_index(name="Count")
         mentor["HasMentor"] = mentor["HasMentor"].map(
-            {0:"❌ No Mentor", 1:"✅ Has Mentor"})
+            {0:"❌ No Mentor",1:"✅ Has Mentor"})
         fig4 = px.bar(mentor,
             x="HasMentor", y="Count",
             color="GrowthStage",
@@ -1504,45 +1441,32 @@ with tab5:
                     "Count":"Entrepreneurs",
                     "GrowthStage":"Stage"},
             title="Mentorship → Growth Stage")
-        fig4.update_layout(
-            height=360,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            legend=dict(font=dict(size=12,
-                                   color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig4, width='stretch')
+        fig4.update_layout(**make_layout(
+            "Mentorship → Growth Stage",360,True))
+        st.plotly_chart(fig4, use_container_width=True)
 
-    # Govt Schemes
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>🏛️</span>
         <div>
-            <p class="section-title">Government Scheme Analytics</p>
-            <p class="section-subtitle">Loan uptake, avg loan & thriving rate per scheme</p>
+            <p class="section-title">Government Scheme
+            Analytics</p>
+            <p class="section-subtitle">Loan uptake, avg
+            loan & thriving rate per scheme</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    scheme_data = fdf[fdf["LoanScheme"] != "None"]\
+    scheme_data = fdf[fdf["LoanScheme"]!="None"]\
         .groupby("LoanScheme").agg(
             Count=("EntrepreneurID","count"),
             AvgLoan=("LoanAmount","mean"),
             AvgRevenue=("MonthlyRevenue","mean"),
             Thriving=("GrowthStage",
-                      lambda x: (x=="Thriving").mean())
+                lambda x:(x=="Thriving").mean())
         ).reset_index()\
-        .sort_values("AvgRevenue", ascending=False)
+        .sort_values("AvgRevenue",ascending=False)
 
-    col5, col6, col7 = st.columns(3)
+    col5,col6,col7 = st.columns(3)
     with col5:
         fig5 = px.bar(scheme_data,
             x="LoanScheme", y="Count",
@@ -1550,26 +1474,17 @@ with tab5:
             color_continuous_scale=["#f9c6d0","#4a0080"],
             text="Count",
             title="Scheme Beneficiaries",
-            labels={"LoanScheme":"","Count":"Beneficiaries"})
+            labels={"LoanScheme":"",
+                    "Count":"Beneficiaries"})
         fig5.update_traces(
             textposition="outside",
             textfont=dict(size=12, color="#1a0030"))
         fig5.update_layout(
             coloraxis_showscale=False,
-            height=360,
             xaxis_tickangle=-20,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig5, width='stretch')
+            **make_layout(
+                "Scheme Beneficiaries",360))
+        st.plotly_chart(fig5, use_container_width=True)
 
     with col6:
         fig6 = px.bar(scheme_data,
@@ -1586,20 +1501,10 @@ with tab5:
             textfont=dict(size=12, color="#1a0030"))
         fig6.update_layout(
             coloraxis_showscale=False,
-            height=360,
             xaxis_tickangle=-20,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig6, width='stretch')
+            **make_layout(
+                "Avg Revenue per Scheme",360))
+        st.plotly_chart(fig6, use_container_width=True)
 
     with col7:
         fig7 = px.bar(scheme_data,
@@ -1616,29 +1521,18 @@ with tab5:
             textfont=dict(size=12, color="#1a0030"))
         fig7.update_layout(
             coloraxis_showscale=False,
-            height=360,
             yaxis_tickformat=".0%",
             xaxis_tickangle=-20,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=12,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=11,
-                                      color="#1a0030")),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig7, width='stretch')
+            **make_layout(
+                "% Thriving by Scheme",360))
+        st.plotly_chart(fig7, use_container_width=True)
 
     st.markdown("""
     <div class="insight-card">
         💡 <b>State Scheme beneficiaries show the highest
-        Thriving rate (30.3%)</b>, followed by Stand-Up India
-        (28.4%). SHG members are 2× more likely to reach
-        Thriving stage. Entrepreneurs with 3+ trainings show
-        40–60% higher revenue than untrained peers.
+        Thriving rate (30.3%)</b>. SHG members are 2× more
+        likely to reach Thriving stage. Entrepreneurs with
+        3+ trainings show 40–60% higher revenue.
     </div>""", unsafe_allow_html=True)
 
 
@@ -1650,13 +1544,14 @@ with tab6:
     <div class="section-header">
         <span style='font-size:1.6rem;'>⚠️</span>
         <div>
-            <p class="section-title">Portal Dropout Risk Analysis</p>
-            <p class="section-subtitle">High-risk segments, dropout drivers & retention intelligence</p>
+            <p class="section-title">Portal Dropout Risk
+            Analysis</p>
+            <p class="section-subtitle">High-risk segments,
+            dropout drivers & retention intelligence</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    # Risk KPI cards
-    r1, r2, r3, r4 = st.columns(4)
+    r1,r2,r3,r4 = st.columns(4)
     rural_drop   = fdf[fdf["AreaType"]=="Rural"]\
                       ["PortalDropout"].mean()
     notrain_drop = fdf[fdf["TrainingsAttended"]==0]\
@@ -1664,74 +1559,66 @@ with tab6:
     nascent_drop = fdf[fdf["GrowthStage"]=="Nascent"]\
                       ["PortalDropout"].mean()
 
-    for col_obj, label, val, color, note in zip(
+    for col_obj,label,val,color,note in zip(
         [r1,r2,r3,r4],
         ["Overall Dropout","Rural Dropout",
          "Zero Training","Nascent Stage"],
-        [fdf["PortalDropout"].mean(), rural_drop,
-         notrain_drop, nascent_drop],
+        [fdf["PortalDropout"].mean(),rural_drop,
+         notrain_drop,nascent_drop],
         ["#e74c3c","#e67e22","#8e44ad","#c0392b"],
         ["Platform-wide","Area risk",
-         "Training gap","Stage risk"]
-    ):
+         "Training gap","Stage risk"]):
         col_obj.markdown(f"""
-        <div style='background:white; border-radius:14px;
-                    padding:20px; border-top:4px solid {color};
+        <div style='background:white;
+                    border-radius:14px; padding:20px;
+                    border-top:4px solid {color};
                     text-align:center;
-                    box-shadow:0 4px 16px rgba(74,0,128,0.1);'>
+                    box-shadow:0 4px 16px
+                    rgba(74,0,128,0.1);'>
             <div style='font-size:2rem; font-weight:800;
                         color:{color};'>{val:.1%}</div>
             <div style='font-size:0.88rem; font-weight:700;
-                        color:#1a0030; margin-top:6px;'>
-                {label}
-            </div>
+                        color:#1a0030;
+                        margin-top:6px;'>{label}</div>
             <div style='font-size:0.78rem; color:#666;
                         margin-top:4px;'>{note}</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
+    col1,col2 = st.columns(2)
 
     with col1:
         drop_stage = fdf.groupby("GrowthStage")\
-                        ["PortalDropout"].mean().reset_index()
+                        ["PortalDropout"].mean()\
+                        .reset_index()
         drop_stage.columns = ["Stage","DropoutRate"]
         drop_stage["DropoutPct"] = \
-            drop_stage["DropoutRate"] * 100
+            drop_stage["DropoutRate"]*100
         fig = px.funnel(
-            drop_stage.sort_values("DropoutPct",
-                                    ascending=False),
+            drop_stage.sort_values(
+                "DropoutPct",ascending=False),
             x="DropoutPct", y="Stage",
             color="Stage",
             color_discrete_map=GROWTH_COLORS,
             title="Dropout Rate by Growth Stage",
             labels={"DropoutPct":"Dropout Rate (%)",
                     "Stage":""})
-        fig.update_layout(
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            legend=dict(font=dict(size=12,
-                                   color="#1a0030"),
-                        bgcolor="rgba(255,255,255,0.8)"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig, width='stretch')
+        fig.update_layout(**make_layout(
+            "Dropout Rate by Growth Stage",380,True))
+        st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         edu_order = ["No Formal Education","Primary (1–5)",
                      "Secondary (6–10)",
                      "Higher Secondary (11–12)",
                      "Graduate","Post-Graduate"]
-        drop_edu = fdf.groupby("Education", observed=True)\
-                      ["PortalDropout"].mean()\
-                      .reindex(edu_order).reset_index()
+        drop_edu = fdf.groupby(
+            "Education",observed=True)\
+            ["PortalDropout"].mean()\
+            .reindex(edu_order).reset_index()
         drop_edu.columns = ["Education","DropoutRate"]
         drop_edu["DropoutPct"] = \
-            drop_edu["DropoutRate"] * 100
+            drop_edu["DropoutRate"]*100
         drop_edu["Short"] = ["None","Primary","Sec",
                               "Hgr Sec","Grad","PG"]
         fig2 = go.Figure(go.Bar(
@@ -1739,36 +1626,23 @@ with tab6:
             y=drop_edu["DropoutPct"],
             marker=dict(
                 color=drop_edu["DropoutPct"],
-                colorscale=[[0,"#fff0f0"],[1,"#c0392b"]],
-                showscale=False
-            ),
+                colorscale=[[0,"#fff0f0"],
+                             [1,"#c0392b"]],
+                showscale=False),
             text=[f"{v:.1f}%"
                   for v in drop_edu["DropoutPct"]],
             textposition="outside",
             textfont=dict(size=12, color="#1a0030"),
             hovertemplate="<b>%{x}</b><br>"
-                          "Dropout: %{y:.1f}%"
-                          "<extra></extra>"
-        ))
+                "Dropout: %{y:.1f}%<extra></extra>"))
         fig2.update_layout(
-            title=dict(text="Dropout Rate by Education",
-                       font=dict(size=15, color="#4a0080")),
             yaxis_title="Dropout Rate (%)",
             xaxis_title="",
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig2, width='stretch')
+            **make_layout(
+                "Dropout Rate by Education",380))
+        st.plotly_chart(fig2, use_container_width=True)
 
-    col3, col4 = st.columns(2)
+    col3,col4 = st.columns(2)
     with col3:
         drop_heat = fdf.groupby(
             ["AreaType","GrowthStage"])\
@@ -1783,101 +1657,82 @@ with tab6:
                                      [1,"#7b0000"]],
             text_auto=".1%", aspect="auto",
             title="Dropout Heatmap: Area × Growth Stage")
-        fig3.update_layout(
-            height=340,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            title_font=dict(size=15, color="#4a0080"),
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig3, width='stretch')
+        fig3.update_layout(**make_layout(
+            "Dropout Heatmap",340))
+        st.plotly_chart(fig3, use_container_width=True)
 
     with col4:
         drop_dig = fdf.groupby("DigitalScore")\
-                      ["PortalDropout"].mean().reset_index()
+                      ["PortalDropout"].mean()\
+                      .reset_index()
         drop_dig.columns = ["Score","DropoutRate"]
-        drop_dig["DropoutPct"] = drop_dig["DropoutRate"] * 100
+        drop_dig["DropoutPct"] = \
+            drop_dig["DropoutRate"]*100
         fig4 = go.Figure(go.Bar(
             x=drop_dig["Score"],
             y=drop_dig["DropoutPct"],
             marker_color=["#c0392b","#e67e22",
-                           "#f39c12","#27ae60","#2980b9"],
+                           "#f39c12","#27ae60",
+                           "#2980b9"],
             text=[f"{v:.1f}%"
                   for v in drop_dig["DropoutPct"]],
             textposition="outside",
             textfont=dict(size=12, color="#1a0030"),
-            hovertemplate="Score %{x}: %{y:.1f}% dropout"
-                          "<extra></extra>"
-        ))
+            hovertemplate="Score %{x}: %{y:.1f}%"
+                "<extra></extra>"))
         fig4.update_layout(
-            title=dict(text="Dropout Rate vs Digital Score",
-                       font=dict(size=15, color="#4a0080")),
             xaxis_title="Digital Score (0–4)",
             yaxis_title="Dropout Rate (%)",
-            xaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            yaxis=dict(tickfont=dict(size=12,
-                                      color="#1a0030")),
-            height=340,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Poppins", size=13,
-                      color="#1a0030"),
-            margin=dict(t=50,b=20,l=10,r=10)
-        )
-        st.plotly_chart(fig4, width='stretch')
+            **make_layout(
+                "Dropout vs Digital Score",340))
+        st.plotly_chart(fig4, use_container_width=True)
 
-    # Risk Table
     st.markdown("""
     <div class="section-header">
         <span style='font-size:1.6rem;'>🚨</span>
         <div>
-            <p class="section-title">High-Risk Segment Table</p>
-            <p class="section-subtitle">Actionable risk flags for targeted intervention</p>
+            <p class="section-title">High-Risk Segment
+            Table</p>
+            <p class="section-subtitle">Actionable risk
+            flags for targeted intervention</p>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    risk = fdf.groupby(["Zone","AreaType","GrowthStage"])\
-              .agg(
-                Count=("EntrepreneurID","count"),
-                DropoutRate=("PortalDropout","mean"),
-                AvgRevenue=("MonthlyRevenue","mean"),
-                DigitalScore=("DigitalScore","mean"),
-                AvgTrainings=("TrainingsAttended","mean")
-              ).reset_index()
+    risk = fdf.groupby(
+        ["Zone","AreaType","GrowthStage"]).agg(
+        Count=("EntrepreneurID","count"),
+        DropoutRate=("PortalDropout","mean"),
+        AvgRevenue=("MonthlyRevenue","mean"),
+        DigitalScore=("DigitalScore","mean"),
+        AvgTrainings=("TrainingsAttended","mean")
+    ).reset_index()
     risk["Risk"] = risk["DropoutRate"].apply(
-        lambda x: "🔴 High"   if x > 0.30 else
-                 ("🟡 Medium" if x > 0.18 else
-                  "🟢 Low"))
+        lambda x:"🔴 High" if x>0.30 else
+                ("🟡 Medium" if x>0.18 else "🟢 Low"))
     risk["Action"] = risk["DropoutRate"].apply(
-        lambda x: "Immediate Intervention" if x > 0.30 else
-                 ("Monitor Closely" if x > 0.18 else
-                  "Stable"))
-    risk = risk.sort_values("DropoutRate", ascending=False)
-    risk["DropoutRate"]  = risk["DropoutRate"]\
-        .apply(lambda x: f"{x:.1%}")
-    risk["AvgRevenue"]   = risk["AvgRevenue"]\
-        .apply(lambda x: f"₹{x:,.0f}")
-    risk["DigitalScore"] = risk["DigitalScore"]\
-        .apply(lambda x: f"{x:.2f}/4")
-    risk["AvgTrainings"] = risk["AvgTrainings"]\
-        .apply(lambda x: f"{x:.1f}")
-    st.dataframe(risk, width='stretch',
-                 hide_index=True, height=400)
+        lambda x:"Immediate Intervention" if x>0.30
+                else("Monitor Closely" if x>0.18
+                else "Stable"))
+    risk = risk.sort_values(
+        "DropoutRate",ascending=False)
+    risk["DropoutRate"] = risk["DropoutRate"]\
+        .apply(lambda x:f"{x:.1%}")
+    risk["AvgRevenue"]  = risk["AvgRevenue"]\
+        .apply(lambda x:f"₹{x:,.0f}")
+    risk["DigitalScore"]= risk["DigitalScore"]\
+        .apply(lambda x:f"{x:.2f}/4")
+    risk["AvgTrainings"]= risk["AvgTrainings"]\
+        .apply(lambda x:f"{x:.1f}")
+    st.dataframe(risk,
+        use_container_width=True,
+        hide_index=True, height=400)
 
     st.markdown("""
     <div class="insight-card">
-        💡 <b>Rural Nascent entrepreneurs with DigitalScore = 0
-        </b> show the highest dropout risk (35–40%). Each
-        additional training reduces dropout by ~2.5%. SHG
-        membership is the single strongest protective factor —
-        reducing dropout by ~8% vs non-members.
+        💡 <b>Rural Nascent entrepreneurs with
+        DigitalScore = 0</b> show highest dropout risk
+        (35–40%). Each additional training reduces dropout
+        by ~2.5%. SHG membership reduces dropout by ~8%.
     </div>""", unsafe_allow_html=True)
 
 
@@ -1887,23 +1742,27 @@ with tab6:
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
 <div style='
-    background: linear-gradient(135deg,
-        #4a0080, #8b0057, #c2185b);
-    border-radius: 16px;
-    padding: 28px 40px;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(74,0,128,0.2);
-'>
-    <div style='font-size:1.8rem; margin-bottom:8px;'>🪷</div>
+    background:linear-gradient(135deg,
+        #4a0080,#8b0057,#c2185b);
+    border-radius:16px; padding:28px 40px;
+    text-align:center;
+    box-shadow:0 4px 20px rgba(74,0,128,0.2);'>
+    <div style='font-size:1.8rem;
+                margin-bottom:8px;'>🪷</div>
     <div style='font-size:1.15rem; font-weight:700;
                 color:#ffffff; margin-bottom:6px;'>
-        Aatmanirbhar Naari — Women Home Business Intelligence Platform 
+        Aatmanirbhar Naari — Women Home Business
+        Intelligence Platform
     </div>
-    <div style='font-size:0.88rem; color:rgba(255,255,255,0.88);
+    <div style='font-size:0.88rem;
+                color:rgba(255,255,255,0.88);
                 margin-bottom:10px;'>
         Women Entrepreneurship Analytics &nbsp;|&nbsp;
+        Unified Mentor Project &nbsp;|&nbsp;
+        Powered by Streamlit & Plotly
     </div>
-    <div style='font-size:0.78rem; color:rgba(255,255,255,0.7);'>
+    <div style='font-size:0.78rem;
+                color:rgba(255,255,255,0.7);'>
         2,000 entrepreneurs · 15 Indian states ·
         10 business categories · 28 data dimensions
     </div>
