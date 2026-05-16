@@ -7,7 +7,7 @@ Built to support data-driven policy decisions for the women empowerment initiati
 ---
 
 ## 🚀 Live Demo
-https://kreetikakishore-aatmanirbhar-naari-analytics-app-xfwhfm.streamlit.app/
+[![Open in Streamlit](https://img.shields.io/badge/Open_in_Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://kreetikakishore-aatmanirbhar-naari-analytics-app-xfwhfm.streamlit.app/)
 
 ---
 
