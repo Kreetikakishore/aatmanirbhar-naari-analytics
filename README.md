@@ -10,6 +10,12 @@ Built to support data-driven policy decisions for the women empowerment initiati
 [![Open in Streamlit](https://img.shields.io/badge/Open_in_Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://kreetikakishore-aatmanirbhar-naari-analytics-app-xfwhfm.streamlit.app/)
 
 ---
+## 📸 Dashboard Preview
+
+<div align="center">
+  <img src="<img width="664" height="324" alt="Screenshot 2026-05-16 092434" src="https://github.com/user-attachments/assets/fc30fb71-1a17-4c22-b17a-28eb466a1a4f" />
+" alt="Aatmanirbhar Naari Dashboard" width="85%">
+</div>
 
 ## 📌 Executive Summary
 
