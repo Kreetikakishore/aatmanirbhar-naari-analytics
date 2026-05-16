@@ -273,8 +273,7 @@ No real personal data was used. Dataset covers 2,000 records × 28 features.
 ## 👤 Author
 
 **Kreetika Kishore**
-Data Analytics Portfolio Project | Unified Mentor | 2026
+Data Analytics Portfolio Project | 2026
 
 ---
 
-*Built with 🪷 to support women entrepreneurship intelligence in India*
