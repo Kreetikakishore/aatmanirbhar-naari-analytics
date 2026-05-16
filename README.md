@@ -13,10 +13,12 @@ Built to support data-driven policy decisions for the women empowerment initiati
 ## 📸 Dashboard Preview
 
 <div align="center">
-  <img src="<img width="664" height="324" alt="Screenshot 2026-05-16 092434" src="https://github.com/user-attachments/assets/fc30fb71-1a17-4c22-b17a-28eb466a1a4f" />
-" alt="Aatmanirbhar Naari Dashboard" width="85%">
+
+![Aatmanirbhar Naari Dashboard](images/dashboard-preview.png)
+
 </div>
 
+---
 ## 📌 Executive Summary
 
 Women micro-entrepreneurship in India remains one of the most underleveraged economic
