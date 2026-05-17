@@ -11,6 +11,7 @@ Built to support data-driven policy decisions for the women empowerment initiati
 
 ---
 ## 📸 Dashboard Preview
+<img width="664" height="324" alt="dashboard-preview" src="https://github.com/user-attachments/assets/ba712065-4dc3-4b1b-afb1-61c3613c0773" />
 
 
 ---
