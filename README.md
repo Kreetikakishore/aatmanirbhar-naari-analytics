@@ -12,11 +12,6 @@ Built to support data-driven policy decisions for the women empowerment initiati
 ---
 ## 📸 Dashboard Preview
 
-<div align="center">
-
-![Aatmanirbhar Naari Dashboard](images/dashboard-preview.png)
-
-</div>
 
 ---
 ## 📌 Executive Summary
